@@ -1,32 +1,3 @@
-'''
-Crea un proyecto nuevo en Python llamado Polideportivo.
-• Escribe un programa en Python para la gestión de un Polideportivo cuyos clientes pueden
-matricularse en varios deportes. La aplicación creada se conectará con una base de datos
-Postgres para guardar y consultar los datos.
-• El programa mostrará un menú con las siguientes opciones:
-1. Dar de alta un cliente con sus datos personales
-2. Dar de baja un cliente
-3. Mostrar los datos personales de un cliente o de todos
-4. Matricular a un cliente en un deporte
-5. Desmatricular a un cliente en un deporte
-6. Mostrar los deportes de un cliente
-7. Salir
-• Crea una clase llamada Clientes con los siguientes atributos para guardar los datos personales
-de los clientes: nombre completo, dni, fecha de nacimiento y teléfono.
-• Los deportes que ofrece el polideportivo son: tenis, natación, atletismo, baloncesto y futbol.
-• Los datos que deben guardarse de los deportes son nombre del deporte y precio/hora.
-• La clase Clientes tendrá un método llamado __datos__ que permita mostrar los datos
-personales de un cliente.
-• La clase Clientes tendrá un método llamado __deportes__ que permita mostrar el nombre de
-los deportes con su precio en los que está matriculado un cliente.
-• Al matricular a un cliente en un deporte se guardará el nombre del deporte y el horario
-elegido.
-• El programa realizará todas las operaciones tanto de creación de la base de datos como de la
-gestión del polideportivo.
-• Toda la información relativa a los clientes se guardará en la base de datos Postgres.
-• Diagrama Entidad-Relación de la Base de Datos en Postgres
-'''
-
 import psycopg2
 import psycopg2.extras
 import pprint
@@ -99,6 +70,9 @@ except (Exception, psycopg2.DatabaseError) as error:
 
 # Creamos una función para el menú.
 def menu():
+    print("\n-----------------------------------------------------------")
+    print("Bienvenido al gimnasio. Elige una opción del menú: ")
+    print("-----------------------------------------------------------")
     # Imprimimos las opciones del menú.
     print('''
         1. Dar de alta un cliente con sus datos personales
@@ -146,10 +120,10 @@ def alta_cliente():
     cursor = conex.cursor()
     # Le pasamos los datos del cliente a la consulta SQL para que se inserten en la tabla clientes.
     cursor.execute(sql, (nombre, dni, fecha_nacimiento, telefono))
-
     # Guardamos los cambios en la base de datos
     conex.commit()
     print("Cliente insertado correctamente")
+
     # Cerramos el cursor
     cursor.close()
 
@@ -229,11 +203,77 @@ def mostrar_cliente():
 
 # Creamos la función para matricular_clientes.
 def matricular_cliente():
-    pass
+    # Al matricular un cliente en un deporte se guardará el dni, nombre del deporte y el horario elegido.
+    # Pedimos los datos del cliente que queremos matricular.
+    dni = input("DNI: ")
+    print("Deportes disponibles: ")
+    # Creamos una consulta SQL para mostrar los deportes disponibles.
+    sql = "SELECT * FROM deportes"
+    # Ejecutamos la consulta SQL.
+    cursor = conex.cursor()
+    cursor.execute(sql)
+    # Usamos el for para recorrer todos los deportes y mostrar sus datos.
+    for deporte in cursor:
+        print(deporte)
+    # Pedimos el nombre del deporte que queremos matricular.
+    nombre = input("Nombre del deporte: ")
+    # Pedimos el horario del deporte que queremos matricular.
+    horario = input("Horario: ")
+    # Creamos la consulta SQL para insertar los datos del cliente en la tabla clientes_deportes.
+    sql = "INSERT INTO clientes_deportes (dni, nombre, horario) VALUES (%s, %s, %s)"
+    # Ejecutamos la consulta SQL.
+    cursor.execute(sql, (dni, nombre, horario))
+    # Guardamos los cambios en la base de datos.
+    conex.commit()
+    # Mensaje de confirmación de que el cliente se ha matriculado correctamente.
+    print("Cliente matriculado")
+
+    # Cerramos el cursor.
+    cursor.close()
 
 # Creamos la función para desmatricular_clientes.
 def desmatricular_cliente():
-    pass
+    # Solicitamos los datos del cliente que queremos desmatricular.
+    dni = input("DNI: ")
+    '''
+    LA SIGUIENTE PARTE ES PARA PODER VER LOS DEPORTES QUE TIENE EL CLIENTE Y PODER ELIMINARLO SIN FALLAR.
+    '''
+    print("Deportes del cliente: ")
+    # Creamos una consulta SQL para mostrar los deportes del cliente con el dni que hemos introducido.
+    sql = "SELECT deportes.nombre, deportes.precio, clientes_deportes.horario FROM deportes "
+    sql += "INNER JOIN clientes_deportes ON deportes.nombre = clientes_deportes.nombre "
+    sql += "WHERE clientes_deportes.dni = %s"
+    # Ejecutamos la consulta SQL.
+    cursor = conex.cursor()
+    # Le pasamos el dni del cliente a la consulta SQL para que se muestren los deportes del cliente.
+    cursor.execute(sql, (dni,))
+    '''
+    FIN DE LA PARTE PARA PODER VER LOS DEPORTES QUE TIENE EL CLIENTE Y PODER ELIMINARLO SIN FALLAR.
+    '''
+    # Usamos el for para recorrer todos los deportes del cliente y mostrarlos.
+    for deporte in cursor:
+        # Mostramos los deportes del cliente.
+        print(deporte)
+    # Ahora que sabemos los deportes que tiene el cliente, le pedimos que elija uno de los deportes.
+    deporte = input("Deporte: ")
+    # Creamos la consulta SQL para eliminar el cliente de la tabla clientes_deportes.
+    sql = "DELETE FROM clientes_deportes WHERE dni = %s AND nombre = %s"
+    # Ejecutamos la consulta SQL.
+    cursor = conex.cursor()
+    # Le pasamos los datos del cliente a la consulta SQL para que se elimine de la tabla clientes_deportes.
+    cursor.execute(sql, (dni, deporte))
+    # Comprobamos si el cliente y el deporte existen, si no existen le saldrá un mensaje de error.
+    # Si existe el dni y el deporte se eliminará el cliente de la tabla clientes_deportes.
+    if cursor.rowcount == 0:
+        print("No existe ningún cliente con ese DNI o el deporte no existe")
+    else:
+        # Guardamos los cambios en la base de datos.
+        conex.commit()
+        # Mensaje de confirmación de que el cliente se ha desmatriculado correctamente.
+        print("Cliente desmatriculado")
+
+    # Cerramos el cursor.
+    cursor.close()
 
 # Creamos la función para mostrar los deportes de un cliente.
 def mostrar_deportes():
